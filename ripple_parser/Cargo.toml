@@ -3,15 +3,19 @@ name = "ripple_parser"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+ripple = []
+default = ["ripple"]
+
+[build-dependencies]
+cc="*"
+
 [dependencies]
+tree-sitter = "0.25"
+tree-sitter-css = "*"
+# tree-sitter-html = "0.23.2"
 
-[dev-dependencies]
-proptest = "1"
-proptest-derive = "0.5"
-mutants = "*"
-yare = "3.0.0"
-divan = "*"
-
-[[bench]]
-name = "bench"
-harness = false
+derive_more = {version="1", features=["debug"]}
+thiserror = "2"
+ropey = "1.6.1"
+lazy_static = "1.5.0"

@@ -1,6 +1,0 @@
-target
-artifacts
-.git
-Earthfile
-flake.nix
-flake.lock

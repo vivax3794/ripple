@@ -1,0 +1,10 @@
+[package]
+name = "surf"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dashmap = "6.1.0"
+ripple_parser = {path="../ripple_parser"}
+tokio = {version="1.43.0", features=["io-std", "rt-multi-thread", "macros"]}
+tower-lsp = "0.20.0"

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["ripple_parser"]
+members = ["ripple_parser", "surf"]
 
 [profile.release]
 # lto = "fat"
