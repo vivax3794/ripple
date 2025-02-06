@@ -1,11 +1,15 @@
 [workspace]
 resolver = "2"
 members = ["ripple_parser", "surf"]
-
-[profile.release]
 # lto = "fat"
 # strip = true
 # codegen-units = 1
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+panic = "abort"
+strip = "debuginfo"

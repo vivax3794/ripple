@@ -1,23 +1,24 @@
 //! This is the html and css parser for the ripple project.
-use derive_more::derive::Debug;
 pub use lazy_static::lazy_static;
 use thiserror::Error;
 pub use tree_sitter;
-use tree_sitter::{Node, Query, QueryMatches, TextProvider};
+use tree_sitter::{Node, Query, QueryCursor, QueryMatches, TextProvider};
 
 lazy_static! {
-    pub static ref LANG_CSS: tree_sitter::Language = tree_sitter_css::LANGUAGE.into();
+    pub static ref CSS: tree_sitter::Language = tree_sitter_css::LANGUAGE.into();
 }
 
 #[macro_export]
-macro_rules! query_css {
-    ($name:ident = $text:literal) => {
+macro_rules! query {
+    ($lang:ident : $name:ident = $text:literal) => {
         ::ripple_parser::lazy_static! {
             static ref $name: ::ripple_parser::tree_sitter::Query =
-                ::ripple_parser::tree_sitter::Query::new(&::ripple_parser::LANG_CSS, $text).unwrap();
+                ::ripple_parser::tree_sitter::Query::new(&::ripple_parser::$lang, $text).unwrap();
         }
     };
 }
+
+pub type RawDocument = ropey::Rope;
 
 /// Errors during parsing
 #[derive(Debug, Error, Clone, Copy)]
@@ -46,10 +47,9 @@ pub struct Document {
     /// The parser for this file
     parser: tree_sitter::Parser,
     /// The tree for this file
-    tree: tree_sitter::Tree,
+    pub tree: tree_sitter::Tree,
     /// Raw document text
-    document: ropey::Rope,
-    cursor: tree_sitter::QueryCursor,
+    pub document: ropey::Rope,
 }
 
 impl Document {
@@ -65,7 +65,6 @@ impl Document {
             parser,
             tree,
             document: ropey::Rope::from(content),
-            cursor: tree_sitter::QueryCursor::new(),
         })
     }
 
@@ -135,22 +134,14 @@ impl Document {
     }
 
     pub fn match_query<'s, 'q>(
-        &'s mut self,
+        &'s self,
         query: &'q Query,
-    ) -> (
-        QueryMatches<'q, 's, RopeTextProvider<'s>, &'s [u8]>,
-        // We return this because the matcher is borrowing use a mutable
-        // Which means callers cant also look up the text of nodes
-        // so we return the rope so they can do that without it being messy
-        &'s ropey::Rope,
-    ) {
-        (
-            self.cursor.matches(
-                query,
-                self.tree.root_node(),
-                RopeTextProvider(&self.document),
-            ),
-            &self.document,
+        cursor: &'q mut QueryCursor,
+    ) -> QueryMatches<'q, 's, RopeTextProvider<'s>, &'s [u8]> {
+        cursor.matches(
+            query,
+            self.tree.root_node(),
+            RopeTextProvider(&self.document),
         )
     }
 

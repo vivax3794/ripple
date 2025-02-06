@@ -4,7 +4,18 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+clap = { version = "4.5.28", features = ["derive"] }
 dashmap = "6.1.0"
+lazy_static = "1.5.0"
 ripple_parser = {path="../ripple_parser"}
+rustc-hash = { version = "2.1.1", features = ["nightly"] }
 tokio = {version="1.43.0", features=["io-std", "rt-multi-thread", "macros"]}
 tower-lsp = "0.20.0"
+
+[dev-dependencies]
+criterion = "0.5.1"
+yare = "3.0.0"
+
+[[bench]]
+name = "frameworks_diagnostics"
+harness = false
