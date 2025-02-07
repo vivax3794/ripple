@@ -7,6 +7,7 @@ edition = "2024"
 clap = { version = "4.5.28", features = ["derive"] }
 dashmap = "6.1.0"
 lazy_static = "1.5.0"
+rayon = "1.10.0"
 ripple_parser = {path="../ripple_parser"}
 rustc-hash = { version = "2.1.1", features = ["nightly"] }
 tikv-jemallocator = "0.6.0"

@@ -1088,6 +1088,7 @@ dependencies = [
  "criterion",
  "dashmap 6.1.0",
  "lazy_static",
+ "rayon",
  "ripple_parser",
  "rustc-hash",
  "tikv-jemallocator",

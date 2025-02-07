@@ -145,8 +145,8 @@ impl Document {
         )
     }
 
-    pub fn get_text(&self, node: Node) -> String {
-        self.document.byte_slice(node.byte_range()).to_string()
+    pub fn get_text(&self, node: Node) -> ropey::RopeSlice {
+        self.document.byte_slice(node.byte_range())
     }
 }
 

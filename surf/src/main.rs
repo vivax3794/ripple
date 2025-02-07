@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::{Parser, Subcommand};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use surf::lsp::Language;
 
 #[derive(Parser, Debug)]
@@ -29,20 +30,22 @@ fn main() {
             surf::lsp::lsp_main();
         }
         Command::Lint { path } => {
-            lint_tree(path);
+            let mut result = Vec::new();
+            collect_files(path, &mut result);
+            result.into_par_iter().for_each(lint);
         }
     }
 }
 
-fn lint_tree(path: PathBuf) {
+fn collect_files(path: PathBuf, result: &mut Vec<PathBuf>) {
     if path.is_file() {
         if path.extension().unwrap_or_default() == "css" {
-            lint(path);
+            result.push(path);
         }
     } else {
         for file in std::fs::read_dir(path).unwrap().flatten() {
             let file = file.path();
-            lint_tree(file);
+            collect_files(file, result);
         }
     }
 }
@@ -51,19 +54,23 @@ fn lint(path: PathBuf) {
     let content = std::fs::read_to_string(&path).unwrap();
 
     let parser = ripple_parser::construct_css_parser().unwrap();
+
+    let start = Instant::now();
     let document = ripple_parser::Document::parse(content, parser).unwrap();
+    let parser_took = start.elapsed();
 
     let start = Instant::now();
     let diags = surf::css::Css::default().diagnostics(&document);
-    let took = start.elapsed();
+    let diag_took = start.elapsed();
 
     println!(
-        "🔥 Found {} problems in {} in {} ms",
+        "🔥 Found {} problems in {} in {} ms (parsed in {} ms)",
         diags.len(),
         path.file_name()
             .unwrap_or_default()
             .to_str()
             .unwrap_or_default(),
-        took.as_millis()
+        diag_took.as_millis(),
+        parser_took.as_millis()
     );
 }

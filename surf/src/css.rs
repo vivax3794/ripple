@@ -1,6 +1,5 @@
-use std::thread;
-
 use lazy_static::lazy_static;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use ripple_parser::query;
 use ripple_parser::tree_sitter::StreamingIterator;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
@@ -18,22 +17,10 @@ query!(CSS:
     "#
 );
 query!(CSS:
-    COLOR_NODES = r#"
-    (color_value) @color
-    "#
-);
-query!(CSS:
-    DECLARATION_NAMES = r#"
+    DECLARATIONS = r#"
     (block
         (declaration (property_name) @name)*
     )
-    "#
-);
-query!(CSS:
-    INTEGERS = r#"
-    (integer_value
-        (unit) @unit
-    ) @integer
     "#
 );
 
@@ -57,19 +44,16 @@ impl Language for Css {
         &self,
         document: &ripple_parser::Document,
     ) -> Vec<tower_lsp::lsp_types::Diagnostic> {
-        thread::scope(|scope| {
-            let syntax_errors = scope.spawn(|| syntax_errors(document));
-            let colors = scope.spawn(|| colors(document));
-            let units = scope.spawn(|| handle_units(document));
-            let blocks = scope.spawn(|| handle_block_properties(document));
-
-            let mut result = Vec::new();
-            result.append(&mut syntax_errors.join().unwrap());
-            result.append(&mut colors.join().unwrap());
-            result.append(&mut units.join().unwrap());
-            result.append(&mut blocks.join().unwrap());
-            result
-        })
+        [
+            syntax_errors,
+            //colors,
+            //handle_ints,
+            handle_block_properties,
+        ]
+        .par_iter()
+        .map(|f| f(document))
+        .flatten()
+        .collect()
     }
 }
 
@@ -108,73 +92,74 @@ fn syntax_errors(document: &ripple_parser::Document) -> Vec<Diagnostic> {
     result
 }
 
-fn colors(document: &ripple_parser::Document) -> Vec<Diagnostic> {
-    let mut cursor = ripple_parser::tree_sitter::QueryCursor::new();
-    let mut result = Vec::new();
-    document
-        .match_query(&COLOR_NODES, &mut cursor)
-        .for_each(|query_match| {
-            let color_node = query_match.captures[0].node;
-            let range = node_range(&color_node);
-            let len = color_node.byte_range().len() - 1;
-
-            if !matches!(len, 3 | 4 | 6 | 8) {
-                result.push(Diagnostic {
-                    range,
-                    severity: Some(DiagnosticSeverity::ERROR),
-                    message: format!("Hex color must be 3,4,6 or 8 charcthers. found {len}"),
-                    code: Some(NumberOrString::String("css_invalid_hex".to_string())),
-                    ..Diagnostic::default()
-                });
-            }
-        });
-    result
-}
-
-fn handle_units(document: &ripple_parser::Document) -> Vec<Diagnostic> {
-    let mut cursor = ripple_parser::tree_sitter::QueryCursor::new();
-    let mut result = Vec::new();
-    document
-        .match_query(&INTEGERS, &mut cursor)
-        .for_each(|query_match| {
-            let unit_node = query_match.captures[1].node;
-            let int_node = query_match.captures[0].node;
-
-            let unit = document.get_text(unit_node).to_lowercase();
-
-            let int_start = int_node.start_byte();
-            let int_end = unit_node.start_byte();
-            let int_value = document.document.byte_slice(int_start..int_end);
-
-            if LENGTH_UNITS.contains(unit.as_str()) {
-                if int_value == "0" {
-                    result.push(Diagnostic {
-                        range: node_range(&unit_node),
-                        severity: Some(DiagnosticSeverity::WARNING),
-                        message: "Units not needed for 0 <length> value".to_string(),
-                        tags: Some(vec![DiagnosticTag::UNNECESSARY]),
-                        code: Some(NumberOrString::String("css_zero_unit".to_string())),
-                        ..Diagnostic::default()
-                    });
-                }
-            } else if !OTHER_UNITS.contains(unit.as_str()) {
-                result.push(Diagnostic {
-                    range: node_range(&unit_node),
-                    severity: Some(DiagnosticSeverity::ERROR),
-                    message: format!("{unit} is not a valid unit"),
-                    code: Some(NumberOrString::String("css_invalid_unit".to_string())),
-                    ..Diagnostic::default()
-                });
-            }
-        });
-    result
-}
+//fn colors(document: &ripple_parser::Document) -> Vec<Diagnostic> {
+//    let mut cursor = ripple_parser::tree_sitter::QueryCursor::new();
+//    let mut result = Vec::new();
+//    document
+//        .match_query(&COLOR_NODES, &mut cursor)
+//        .for_each(|query_match| {
+//            let color_node = query_match.captures[0].node;
+//            let range = node_range(&color_node);
+//            let len = color_node.byte_range().len() - 1;
+//
+//            if !matches!(len, 3 | 4 | 6 | 8) {
+//                result.push(Diagnostic {
+//                    range,
+//                    severity: Some(DiagnosticSeverity::ERROR),
+//                    message: format!("Hex color must be 3,4,6 or 8 charcthers. found {len}"),
+//                    code: Some(NumberOrString::String("css_invalid_hex".to_string())),
+//                    ..Diagnostic::default()
+//                });
+//            }
+//        });
+//    result
+//}
+//
+//fn handle_ints(document: &ripple_parser::Document) -> Vec<Diagnostic> {
+//    let mut cursor = ripple_parser::tree_sitter::QueryCursor::new();
+//    let mut result = Vec::new();
+//    document
+//        .match_query(&INTEGERS, &mut cursor)
+//        .for_each(|query_match| {
+//            let unit_node = query_match.captures[1].node;
+//            let int_node = query_match.captures[0].node;
+//
+//            let mut unit = document.get_text(unit_node).to_string();
+//            unit.make_ascii_lowercase();
+//
+//            let int_start = int_node.start_byte();
+//            let int_end = unit_node.start_byte();
+//            let int_value = document.document.byte_slice(int_start..int_end);
+//
+//            if LENGTH_UNITS.contains(unit.as_str()) {
+//                if int_value == "0" {
+//                    result.push(Diagnostic {
+//                        range: node_range(&unit_node),
+//                        severity: Some(DiagnosticSeverity::WARNING),
+//                        message: "Units not needed for 0 <length> value".to_string(),
+//                        tags: Some(vec![DiagnosticTag::UNNECESSARY]),
+//                        code: Some(NumberOrString::String("css_zero_unit".to_string())),
+//                        ..Diagnostic::default()
+//                    });
+//                }
+//            } else if !OTHER_UNITS.contains(unit.as_str()) {
+//                result.push(Diagnostic {
+//                    range: node_range(&unit_node),
+//                    severity: Some(DiagnosticSeverity::ERROR),
+//                    message: format!("{unit} is not a valid unit"),
+//                    code: Some(NumberOrString::String("css_invalid_unit".to_string())),
+//                    ..Diagnostic::default()
+//                });
+//            }
+//        });
+//    result
+//}
 
 fn handle_block_properties(document: &ripple_parser::Document) -> Vec<Diagnostic> {
     let mut cursor = ripple_parser::tree_sitter::QueryCursor::new();
     let mut result = Vec::new();
     document
-        .match_query(&DECLARATION_NAMES, &mut cursor)
+        .match_query(&DECLARATIONS, &mut cursor)
         .for_each(|query_match| {
             let mut properties =
                 HashMap::with_capacity_and_hasher(query_match.captures.len(), Default::default());
@@ -226,7 +211,7 @@ mod tests {
         let expr = document.tree.root_node().to_sexp();
         println!("{expr}");
         let diagnsotics = Css::default().diagnostics(&document);
-        diagnsotics
+        let mut result: Vec<_> = diagnsotics
             .into_iter()
             .map(|diag| {
                 let NumberOrString::String(code) = diag.code.expect("Diagnostics didnt have code")
@@ -236,7 +221,9 @@ mod tests {
 
                 code
             })
-            .collect()
+            .collect();
+        result.sort();
+        result
     }
 
     #[test]
@@ -269,8 +256,8 @@ mod tests {
             result,
             vec![
                 "css_overshadowed",
-                "css_overshadowed_hint",
                 "css_overshadowed",
+                "css_overshadowed_hint",
             ]
         );
     }
@@ -286,6 +273,19 @@ mod tests {
         );
 
         assert_eq!(result, vec!["css_invalid_unit"]);
+    }
+
+    #[test]
+    fn valid_unit_uppercase() {
+        let result = run_diagnostics(
+            "
+        button {
+            font-size: 10PX;
+        }
+        ",
+        );
+
+        assert!(result.is_empty());
     }
 
     #[test]
@@ -338,6 +338,34 @@ mod tests {
         );
 
         assert_eq!(result, vec!["css_invalid_hex"]);
+    }
+
+    #[test]
+    fn bad_contrast() {
+        let result = run_diagnostics(
+            "
+        button {
+            color: #FFF;
+            background-color: #FFE;
+        }
+        ",
+        );
+
+        assert_eq!(result, vec!["css_bad_contrast"]);
+    }
+
+    #[test]
+    fn good_contrast() {
+        let result = run_diagnostics(
+            "
+        button {
+            color: #FFF;
+            background-color: #000;
+        }
+        ",
+        );
+
+        assert!(result.is_empty());
     }
 
     #[parameterized(
