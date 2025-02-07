@@ -344,9 +344,12 @@ mod tests {
         bulma = {"bulma.css"},
         bootstrap = {"bootstrap.css"},
         foundation = {"foundation.css"},
-        materialize = {"materialize.css"}
+        materialize = {"materialize.css"},
+        fomantic = {"materialize.css"},
+        vanilla = {"vanilla.css"},
+        tachyon = {"tachyon.css"},
     )]
-    fn css_framework(file: &str) {
+    fn css_framework_sanity_check(file: &str) {
         let content = std::fs::read_to_string(format!("../test_data/{file}")).unwrap();
 
         let parser = construct_css_parser().unwrap();
@@ -357,9 +360,10 @@ mod tests {
             if lint.severity == Some(DiagnosticSeverity::ERROR) {
                 // We are not in control of syntax lints
                 // (well not in control as we just report what TS tells us)
+                // ((And theres a good few parsing bugs in the grammar unfourtnatly))
+                // https://github.com/tree-sitter/tree-sitter-css/issues/67
+                // https://github.com/tree-sitter/tree-sitter-css/issues/68
                 if lint.code == Some(NumberOrString::String("css_invalid_syntax".to_string())) {
-                    // https://github.com/tree-sitter/tree-sitter-css/issues/67
-                    // https://github.com/tree-sitter/tree-sitter-css/issues/68
                     continue;
                 }
 
