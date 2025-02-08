@@ -1,9 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["ripple_parser", "ripple_transpiler", "surf"]
-# lto = "fat"
-# strip = true
-# codegen-units = 1
+members = ["ripple_transpiler"]
 
 [profile.dev.package."*"]
 opt-level = 3
