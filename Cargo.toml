@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["ripple_parser", "surf"]
+members = ["ripple_parser", "ripple_transpiler", "surf"]
 # lto = "fat"
 # strip = true
 # codegen-units = 1
