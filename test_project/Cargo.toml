@@ -1,0 +1,10 @@
+[package]
+name = "test_project"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ripple_runtime = {path = "../ripple_runtime"}
+
+[build-dependencies]
+ripple_transpiler = {path = "../ripple_transpiler"}

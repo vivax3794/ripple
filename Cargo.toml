@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["ripple_transpiler"]
+members = [ "example_project", "ripple_cli", "ripple_runtime","ripple_transpiler", "test_project"]
 
 [profile.dev.package."*"]
 opt-level = 3

@@ -1,7 +1,6 @@
 [package]
-name = "ripple_transpiler"
+name = "ripple_runtime"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-walkdir = "2.5.0"
