@@ -4,3 +4,5 @@ hard_tabs = false
 imports_layout = "HorizontalVertical"
 imports_granularity = "Module"
 group_imports = "StdExternalCrate"
+
+chain_width = 0

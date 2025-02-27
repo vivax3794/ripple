@@ -1,41 +1,103 @@
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell, OnceCell};
+use std::collections::HashSet;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 
 use crate::element::Element;
+use crate::utils::{InnerMut, RcCmpPtr};
 
-struct DataTracker<T, C: ComponentData> {
+pub(crate) trait SmallAny {}
+impl<T> SmallAny for T {}
+
+pub struct DataTracker<T, C: ComponentData> {
     data: T,
-    written: bool,
+    written: Cell<bool>,
     read: Cell<bool>,
-    depdencies: Vec<RenderCallback<C>>,
+    callbacks: InnerMut<HashSet<RcCmpPtr<RenderCallback<C>>>>,
+    new_callbacks: InnerMut<Vec<RcCmpPtr<RenderCallback<C>>>>,
+    remove_callbacks: InnerMut<Vec<RcCmpPtr<RenderCallback<C>>>>,
 }
 
 impl<T, C: ComponentData> DataTracker<T, C> {
-    fn new(data: T) -> Self {
+    pub fn new(data: T) -> Self {
         Self {
             data,
-            written: false,
+            written: Cell::new(false),
             read: Cell::new(false),
-            depdencies: Vec::new(),
+            callbacks: InnerMut::default(),
+            new_callbacks: InnerMut::default(),
+            remove_callbacks: InnerMut::default(),
+        }
+    }
+}
+
+pub trait DataTrackerMethods<C: ComponentData> {
+    fn clear(&self);
+    fn register_callback(&self, callback: RcCmpPtr<RenderCallback<C>>);
+    fn drain_queue(&self);
+    fn remove(&self, callback: RcCmpPtr<RenderCallback<C>>);
+    fn update(&self, data: &State<C>);
+}
+
+impl<C: ComponentData, T> DataTrackerMethods<C> for DataTracker<T, C> {
+    #[inline(always)]
+    fn clear(&self) {
+        self.written
+            .set(false);
+        self.read
+            .set(false);
+    }
+
+    #[inline]
+    fn register_callback(&self, callback: RcCmpPtr<RenderCallback<C>>) {
+        if self
+            .read
+            .get()
+        {
+            self.new_callbacks
+                .borrow_mut()
+                .push(callback);
         }
     }
 
-    fn clear(&mut self) {
-        self.written = false;
-        self.read.set(false);
+    #[inline]
+    fn remove(&self, callback: RcCmpPtr<RenderCallback<C>>) {
+        self.remove_callbacks
+            .borrow_mut()
+            .push(callback);
     }
 
-    fn register_callback(&mut self, callback: RenderCallback<C>) {
-        if self.read.get() {
-            self.depdencies.push(callback);
+    fn drain_queue(&self) {
+        let mut callbacks = self
+            .callbacks
+            .borrow_mut();
+        let mut new = self
+            .new_callbacks
+            .borrow_mut();
+        let mut remove = self
+            .remove_callbacks
+            .borrow_mut();
+
+        for callback in new.drain(..) {
+            callbacks.insert(callback);
+        }
+        for callback in remove.drain(..) {
+            callbacks.remove(&callback);
         }
     }
 
-    fn update(&mut self, data: &mut C) {
-        if self.written {
-            for callback in &mut self.depdencies {
-                callback.update(data);
+    #[inline]
+    fn update(&self, data: &State<C>) {
+        if self
+            .written
+            .get()
+        {
+            for callback in self
+                .callbacks
+                .borrow()
+                .iter()
+            {
+                RenderCallback::update(callback, data);
             }
         }
     }
@@ -44,72 +106,287 @@ impl<T, C: ComponentData> DataTracker<T, C> {
 impl<T, C: ComponentData> Deref for DataTracker<T, C> {
     type Target = T;
 
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
-        self.read.set(true);
+        self.read
+            .set(true);
         &self.data
     }
 }
 impl<T, C: ComponentData> DerefMut for DataTracker<T, C> {
+    #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.written = true;
+        self.written
+            .set(true);
         &mut self.data
     }
 }
 
-pub struct RenderCallback<C: ComponentData> {
-    element: Rc<dyn Fn(&mut C) -> web_sys::Node>,
-    target_node: web_sys::Node,
-}
-
-impl<C: ComponentData> Clone for RenderCallback<C> {
-    fn clone(&self) -> Self {
-        Self {
-            element: Rc::clone(&self.element),
-            target_node: self.target_node.clone(),
-        }
-    }
+pub(crate) struct RenderCallback<C: ComponentData> {
+    element: Box<dyn Fn(&State<C>) -> Box<dyn Element<C>>>,
+    target_node: InnerMut<web_sys::Node>,
+    children_callbacks: InnerMut<Vec<RcCmpPtr<Self>>>,
+    children_events: InnerMut<Vec<Box<dyn SmallAny>>>,
 }
 
 impl<C: ComponentData> RenderCallback<C> {
-    fn update(&mut self, data: &mut C) {
-        let new_node = (self.element)(data);
-        let parent = self.target_node.parent_node().unwrap();
-        parent.replace_child(&self.target_node, &new_node).unwrap();
-        self.target_node = new_node;
+    pub(crate) fn update(this: &RcCmpPtr<Self>, ctx: &State<C>) {
+        for callback in this
+            .children_callbacks
+            .borrow_mut()
+            .drain(..)
+        {
+            ctx.remove(callback);
+        }
+
+        ctx.clear_state();
+        let element = (this.element)(ctx);
+        ctx.register_dependency(this.clone());
+
+        ctx.new_stack();
+        let new_node = element.render_box(ctx);
+        let (new_callback, new_event) = ctx.pop_stack();
+
+        *this
+            .children_callbacks
+            .borrow_mut() = new_callback;
+        *this
+            .children_events
+            .borrow_mut() = new_event;
+
+        let mut target_node = this
+            .target_node
+            .borrow_mut();
+        let parent = target_node
+            .parent_node()
+            .expect("No parent found");
+        parent
+            .replace_child(&new_node, &target_node)
+            .expect("Failed to replace node");
+        *target_node = new_node;
     }
 }
 
-pub trait ComponentData: Sized {
-    fn clear_state(&mut self);
-    fn register_dependency(&mut self, callback: RenderCallback<Self>);
-    fn update(&mut self);
-    fn weak(&self) -> Weak<Self>;
+pub trait ComponentData: Sized + 'static {
+    #[doc(hidden)]
+    fn references(&self) -> Vec<&dyn DataTrackerMethods<Self>>;
 }
 
-pub trait ComponentBase {
+pub struct State<T: ComponentData> {
+    pub(crate) data: T,
+    this: OnceCell<Weak<InnerMut<Self>>>,
+    callback_stack: InnerMut<Vec<Vec<RcCmpPtr<RenderCallback<T>>>>>,
+    event_stack: InnerMut<Vec<Vec<Box<dyn SmallAny>>>>,
+}
+
+impl<T: ComponentData> Deref for State<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<T: ComponentData> DerefMut for State<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
+    }
+}
+
+pub type S<C> = State<<C as ComponentBase>::Data>;
+
+impl<T: ComponentData> State<T> {
+    pub(crate) fn new(data: T) -> Rc<InnerMut<Self>> {
+        let this = Self {
+            data,
+            this: OnceCell::new(),
+            callback_stack: InnerMut::default(),
+            event_stack: InnerMut::default(),
+        };
+        let this = Rc::new(InnerMut::new(this));
+        this.borrow_mut()
+            .this
+            .set(Rc::downgrade(&this))
+            .expect("Failed to set weak ref");
+        this
+    }
+
+    #[inline(always)]
+    pub(crate) fn weak(&self) -> Weak<InnerMut<Self>> {
+        self.this
+            .get()
+            .expect("Weak not set")
+            .clone()
+    }
+
+    pub(crate) fn clear_state(&self) {
+        for x in self
+            .data
+            .references()
+        {
+            x.clear();
+        }
+    }
+
+    pub(crate) fn register_dependency(&self, callback: RcCmpPtr<RenderCallback<T>>) {
+        for x in self
+            .data
+            .references()
+        {
+            x.register_callback(callback.clone());
+        }
+
+        for stack in self
+            .callback_stack
+            .borrow_mut()
+            .iter_mut()
+        {
+            stack.push(callback.clone());
+        }
+    }
+
+    pub(crate) fn remove(&self, callback: RcCmpPtr<RenderCallback<T>>) {
+        for x in self
+            .data
+            .references()
+        {
+            x.remove(callback.clone());
+        }
+    }
+
+    #[inline]
+    fn new_stack(&self) {
+        self.callback_stack
+            .borrow_mut()
+            .push(Vec::new());
+        self.event_stack
+            .borrow_mut()
+            .push(Vec::new());
+    }
+
+    #[inline]
+    fn pop_stack(&self) -> (Vec<RcCmpPtr<RenderCallback<T>>>, Vec<Box<dyn SmallAny>>) {
+        let callback = self
+            .callback_stack
+            .borrow_mut()
+            .pop()
+            .expect("Callback stack stack empty");
+        let event = self
+            .event_stack
+            .borrow_mut()
+            .pop()
+            .expect("Stack empty");
+        (callback, event)
+    }
+
+    #[inline]
+    pub(crate) fn register_event(&self, event: Box<dyn SmallAny>) {
+        self.event_stack
+            .borrow_mut()
+            .last_mut()
+            .expect("No stack")
+            .push(event);
+    }
+
+    fn drain_queue(&self) {
+        for x in self
+            .data
+            .references()
+        {
+            x.drain_queue();
+        }
+    }
+
+    pub(crate) fn update(&self) {
+        for x in self
+            .data
+            .references()
+        {
+            x.update(self);
+        }
+        self.drain_queue();
+    }
+}
+
+#[diagnostic::on_unimplemented(
+    message = "Type `{Self}` is not a component.",
+    note = "add `#[derive(Component)]` to the struct"
+)]
+pub trait ComponentBase: Sized {
     type Data: ComponentData;
+    fn into_data(self) -> Self::Data;
+
+    #[inline(always)]
+    fn into_state(self) -> Rc<InnerMut<State<Self::Data>>> {
+        State::new(self.into_data())
+    }
 }
 
-pub trait Component: ComponentBase + Sized {
+pub trait Component: ComponentBase {
     fn render() -> impl Element<Self::Data>;
 }
 
 impl<F, C, R> Element<C> for F
 where
-    F: Fn(&C) -> R + 'static,
-    R: Element<C>,
+    F: Fn(&State<C>) -> R + 'static,
+    R: Element<C> + 'static,
     C: ComponentData,
 {
-    fn render(self, ctx: &mut C) -> web_sys::Node {
-        ctx.clear_state();
-        let element = self(ctx);
+    fn render_box(self: Box<Self>, ctx: &State<C>) -> web_sys::Node {
+        let node: web_sys::Node = web_sys::Comment::new()
+            .expect("Failed to create temp comment")
+            .into();
 
-        let node = element.render(ctx);
         let callback = RenderCallback {
-            element: Rc::new(move |data| self(data).render(data)),
-            target_node: node.clone(),
+            element: Box::new(move |ctx| Box::new(self(ctx))),
+            target_node: InnerMut::new(node.clone()),
+            children_callbacks: InnerMut::default(),
+            children_events: InnerMut::default(),
         };
-        ctx.register_dependency(callback);
-        node
+        let callback = RcCmpPtr(Rc::new(callback));
+
+        let parent = gloo::utils::document()
+            .create_element("div")
+            .expect("Faield to create temp parent");
+
+        parent
+            .append_child(&node)
+            .expect("Failed to append child");
+        RenderCallback::update(&callback, ctx);
+
+        parent
+            .first_child()
+            .expect("Child was just inserted")
     }
+}
+
+/// Mounts the component at the target id
+/// Replacing the element with the component
+/// This should be the entry point to your application
+///
+/// **WARNING:** This method implicitly leaks the memory of the root component
+#[inline(always)]
+pub fn mount_component<C: Component>(component: C, target_id: &'static str) {
+    let data = component.into_state();
+    let element = C::render();
+
+    let borrow_data = data.borrow();
+    borrow_data.new_stack();
+    let node = element.render(&data.borrow());
+    let (_, root_event_handlers) = borrow_data.pop_stack();
+    borrow_data.drain_queue();
+
+    let document = gloo::utils::document();
+    let target = document
+        .get_element_by_id(target_id)
+        .expect("Failed to get mount point");
+    target
+        .replace_with_with_node_1(&node)
+        .expect("Failed to replace mount point");
+
+    drop(borrow_data);
+
+    // This is the entry point, this component should be alive FOREVER
+    std::mem::forget(data);
+    std::mem::forget(root_event_handlers);
 }
