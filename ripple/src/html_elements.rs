@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::rc::Weak;
 
 use wasm_bindgen::prelude::Closure;
@@ -21,27 +20,27 @@ impl<C: ComponentData, F: Fn(&mut State<C>) + 'static> Event<C> for F {
 #[must_use = "Web elements are useless if not rendered"]
 pub struct WebElement<C: ComponentData> {
     name: &'static str,
-    events: HashMap<&'static str, Box<dyn Fn(&mut State<C>)>>,
+    events: Vec<(&'static str, Box<dyn Fn(&mut State<C>)>)>,
     children: Vec<Box<dyn Element<C>>>,
-    styles: HashMap<&'static str, Cow<'static, str>>,
-    attributes: HashMap<&'static str, Cow<'static, str>>,
+    styles: Vec<(&'static str, Cow<'static, str>)>,
+    attributes: Vec<(&'static str, Cow<'static, str>)>,
 }
 
 impl<C: ComponentData> WebElement<C> {
     pub fn new(name: &'static str) -> Self {
         Self {
             name,
-            events: HashMap::new(),
+            events: Vec::new(),
             children: Vec::new(),
-            styles: HashMap::new(),
-            attributes: HashMap::new(),
+            styles: Vec::new(),
+            attributes: Vec::new(),
         }
     }
 
     #[inline(always)]
     pub fn on(mut self, event: &'static str, function: impl Event<C>) -> Self {
         self.events
-            .insert(event, function.func());
+            .push((event, function.func()));
         self
     }
 
@@ -60,14 +59,14 @@ impl<C: ComponentData> WebElement<C> {
     #[inline(always)]
     pub fn style(mut self, key: &'static str, value: impl Into<Cow<'static, str>>) -> Self {
         self.styles
-            .insert(key, value.into());
+            .push((key, value.into()));
         self
     }
 
     #[inline(always)]
     pub fn attr(mut self, key: &'static str, value: impl Into<Cow<'static, str>>) -> Self {
         self.attributes
-            .insert(key, value.into());
+            .push((key, value.into()));
         self
     }
 
