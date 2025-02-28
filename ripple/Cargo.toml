@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-gloo = { version = "0.11.0", default-features = false, features = ["utils"] }
 wasm-bindgen = {version= "0.2.100"}
-web-sys = { version = "0.3.77", features = ["Comment", "Element", "Event", "Text"] }
+web-sys = { version = "0.3.77", features = ["Comment", "Element", "Event", "Text", "Document", "Window", "HtmlElement"] }
 
 ripple_macros = {path = "../ripple_macros"}
+itoa = { version = "1.0.14" }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.50"
@@ -18,32 +18,12 @@ cfg_aliases = "0.2.1"
 rustversion = "1.0.19"
 
 [features]
-# TODO: document these in the actual docs once thats a thing :P
 default = ["web_utils", "intern", "nightly_optimization"]
 
-# Convinent wrapper methods for various web utilities
 web_utils = ["web-sys/console"]
-
-# Intern static strings to avoid duplicate work
-intern = ["wasm-bindgen/enable-interning"]
-
-# Implement `Element` for `()` which might cause certain mistakes to be silenced.
 element_unit = []
-
-# In debug builds the framework output stuff to `console.log`
 debug_log = ["web_utils"]
-
-# This enabled nightly only features for use internally in the library
-# This feature flag has no effect on stable
-# This flag should never have a visible effect on the public api
-nightly_optimization = []
-# This enabled the use of nightly features in the public api such as trait specializtion
-# This will cause a compiler error on stable
 nightly = ["nightly_optimization"]
-# Without this feature the framework contains no unsafe code.
-# If this is enabled safe abstractions such as `RefCell` will be swapped out for unsafe more performant ones.
-# The framework does its best to never trigger UB, but we cant guarantee it.
-# This feature only has an affect in release mode
-# It is the goal of this feature that UB can only be triggered in cases that lead to a panic without it.
-unsafe_optimization = []
-force_unsafe_optimization = ["unsafe_optimization"]
+
+intern = ["wasm-bindgen/enable-interning"]
+nightly_optimization = []

@@ -7,7 +7,10 @@ const MOUNT_PARENT: &str = "__TESTING_PARENT";
 pub const MOUNT_POINT: &str = "__TESTING_MOUNT_POINT";
 
 pub fn setup() {
-    let document = gloo::utils::document();
+    let document = web_sys::window()
+        .unwrap()
+        .document()
+        .unwrap();
 
     if let Some(element) = document.get_element_by_id(MOUNT_PARENT) {
         element.remove();
@@ -34,7 +37,10 @@ pub fn setup() {
 }
 
 pub fn get(id: &'static str) -> HtmlElement {
-    let document = gloo::utils::document();
+    let document = web_sys::window()
+        .unwrap()
+        .document()
+        .unwrap();
 
     document
         .get_element_by_id(id)

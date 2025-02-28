@@ -18,6 +18,7 @@ impl<C: ComponentData, F: Fn(&mut State<C>) + 'static> Event<C> for F {
     }
 }
 
+#[must_use = "Web elements are useless if not rendered"]
 pub struct WebElement<C: ComponentData> {
     name: &'static str,
     events: HashMap<&'static str, Box<dyn Fn(&mut State<C>)>>,
@@ -86,7 +87,10 @@ impl<C: ComponentData + 'static> Element<C> for WebElement<C> {
             attributes,
         } = *self;
 
-        let document = gloo::utils::document();
+        let document = web_sys::window()
+            .expect("Failed to get window")
+            .document()
+            .expect("Failed to get document");
         let element = document
             .create_element(intern(name))
             .expect("Failed to get document");
@@ -105,6 +109,7 @@ impl<C: ComponentData + 'static> Element<C> for WebElement<C> {
                 let data = new_ctx
                     .upgrade()
                     .expect("Component dropped in event callback");
+
                 let mut data = data.borrow_mut();
 
                 data.clear_state();
@@ -125,7 +130,7 @@ impl<C: ComponentData + 'static> Element<C> for WebElement<C> {
 
         let style = styles
             .into_iter()
-            .map(|(key, value)| format!("{key}:{value};"))
+            .map(|(key, value)| key.to_owned() + ":" + &value + ";")
             .collect::<Vec<_>>()
             .join("");
         element

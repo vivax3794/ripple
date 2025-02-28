@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ripple = {path = "../ripple", features=["debug_log", "nightly", "unsafe_optimization"]}
+ripple = {path = "../ripple", features=["debug_log", "nightly"]}
+wasm-bindgen = {version= "0.2.100"}

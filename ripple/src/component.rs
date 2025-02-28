@@ -1,10 +1,10 @@
-use std::cell::{Cell, OnceCell};
+use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 
 use crate::element::Element;
-use crate::utils::{InnerMut, RcCmpPtr};
+use crate::utils::RcCmpPtr;
 
 pub(crate) trait SmallAny {}
 impl<T> SmallAny for T {}
@@ -13,9 +13,9 @@ pub struct DataTracker<T, C: ComponentData> {
     data: T,
     written: Cell<bool>,
     read: Cell<bool>,
-    callbacks: InnerMut<HashSet<RcCmpPtr<RenderCallback<C>>>>,
-    new_callbacks: InnerMut<Vec<RcCmpPtr<RenderCallback<C>>>>,
-    remove_callbacks: InnerMut<Vec<RcCmpPtr<RenderCallback<C>>>>,
+    callbacks: RefCell<HashSet<RcCmpPtr<RenderCallback<C>>>>,
+    new_callbacks: RefCell<Vec<RcCmpPtr<RenderCallback<C>>>>,
+    remove_callbacks: RefCell<Vec<RcCmpPtr<RenderCallback<C>>>>,
 }
 
 impl<T, C: ComponentData> DataTracker<T, C> {
@@ -24,9 +24,9 @@ impl<T, C: ComponentData> DataTracker<T, C> {
             data,
             written: Cell::new(false),
             read: Cell::new(false),
-            callbacks: InnerMut::default(),
-            new_callbacks: InnerMut::default(),
-            remove_callbacks: InnerMut::default(),
+            callbacks: RefCell::default(),
+            new_callbacks: RefCell::default(),
+            remove_callbacks: RefCell::default(),
         }
     }
 }
@@ -124,9 +124,9 @@ impl<T, C: ComponentData> DerefMut for DataTracker<T, C> {
 
 pub(crate) struct RenderCallback<C: ComponentData> {
     element: Box<dyn Fn(&State<C>) -> Box<dyn Element<C>>>,
-    target_node: InnerMut<web_sys::Node>,
-    children_callbacks: InnerMut<Vec<RcCmpPtr<Self>>>,
-    children_events: InnerMut<Vec<Box<dyn SmallAny>>>,
+    target_node: RefCell<web_sys::Node>,
+    children_callbacks: RefCell<Vec<RcCmpPtr<Self>>>,
+    children_events: RefCell<Vec<Box<dyn SmallAny>>>,
 }
 
 impl<C: ComponentData> RenderCallback<C> {
@@ -174,9 +174,9 @@ pub trait ComponentData: Sized + 'static {
 
 pub struct State<T: ComponentData> {
     pub(crate) data: T,
-    this: OnceCell<Weak<InnerMut<Self>>>,
-    callback_stack: InnerMut<Vec<Vec<RcCmpPtr<RenderCallback<T>>>>>,
-    event_stack: InnerMut<Vec<Vec<Box<dyn SmallAny>>>>,
+    this: Option<Weak<RefCell<Self>>>,
+    callback_stack: RefCell<Vec<Vec<RcCmpPtr<RenderCallback<T>>>>>,
+    event_stack: RefCell<Vec<Vec<Box<dyn SmallAny>>>>,
 }
 
 impl<T: ComponentData> Deref for State<T> {
@@ -196,25 +196,25 @@ impl<T: ComponentData> DerefMut for State<T> {
 pub type S<C> = State<<C as ComponentBase>::Data>;
 
 impl<T: ComponentData> State<T> {
-    pub(crate) fn new(data: T) -> Rc<InnerMut<Self>> {
+    pub(crate) fn new(data: T) -> Rc<RefCell<Self>> {
         let this = Self {
             data,
-            this: OnceCell::new(),
-            callback_stack: InnerMut::default(),
-            event_stack: InnerMut::default(),
+            this: None,
+            callback_stack: RefCell::default(),
+            event_stack: RefCell::default(),
         };
-        let this = Rc::new(InnerMut::new(this));
+        let this = Rc::new(RefCell::new(this));
+
         this.borrow_mut()
-            .this
-            .set(Rc::downgrade(&this))
-            .expect("Failed to set weak ref");
+            .this = Some(Rc::downgrade(&this));
+
         this
     }
 
     #[inline(always)]
-    pub(crate) fn weak(&self) -> Weak<InnerMut<Self>> {
+    pub(crate) fn weak(&self) -> Weak<RefCell<Self>> {
         self.this
-            .get()
+            .as_ref()
             .expect("Weak not set")
             .clone()
     }
@@ -317,7 +317,7 @@ pub trait ComponentBase: Sized {
     fn into_data(self) -> Self::Data;
 
     #[inline(always)]
-    fn into_state(self) -> Rc<InnerMut<State<Self::Data>>> {
+    fn into_state(self) -> Rc<RefCell<State<Self::Data>>> {
         State::new(self.into_data())
     }
 }
@@ -339,13 +339,16 @@ where
 
         let callback = RenderCallback {
             element: Box::new(move |ctx| Box::new(self(ctx))),
-            target_node: InnerMut::new(node.clone()),
-            children_callbacks: InnerMut::default(),
-            children_events: InnerMut::default(),
+            target_node: RefCell::new(node.clone()),
+            children_callbacks: RefCell::default(),
+            children_events: RefCell::default(),
         };
         let callback = RcCmpPtr(Rc::new(callback));
 
-        let parent = gloo::utils::document()
+        let parent = web_sys::window()
+            .expect("Failed to get window")
+            .document()
+            .expect("Failed to get document")
             .create_element("div")
             .expect("Faield to create temp parent");
 
@@ -376,7 +379,10 @@ pub fn mount_component<C: Component>(component: C, target_id: &'static str) {
     let (_, root_event_handlers) = borrow_data.pop_stack();
     borrow_data.drain_queue();
 
-    let document = gloo::utils::document();
+    let document = web_sys::window()
+        .expect("Failed to get window")
+        .document()
+        .expect("Failed to get document");
     let target = document
         .get_element_by_id(target_id)
         .expect("Failed to get mount point");

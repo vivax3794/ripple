@@ -1,0 +1,9 @@
+[book]
+authors = ["Viv"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Ripple"
+
+[output.html.playground]
+runnable = false

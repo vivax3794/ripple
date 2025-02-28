@@ -1,17 +1,6 @@
-#![deny(clippy::unwrap_used)]
+#![deny(clippy::unwrap_used, unsafe_code)]
 #![allow(clippy::type_complexity, private_interfaces, incomplete_features)]
 #![cfg_attr(feature = "nightly", feature(specialization))]
-#![cfg_attr(not(unsafe_optimization), deny(unsafe_code))]
-// Ref<...> vs &T causes a lot of extra warnings
-#![cfg_attr(
-    unsafe_optimization,
-    allow(
-        clippy::needless_borrow,
-        unused_mut,
-        clippy::mutable_key_type,
-        dropping_references
-    )
-)]
 
 mod component;
 mod element;

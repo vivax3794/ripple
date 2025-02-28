@@ -36,7 +36,7 @@ impl Component for DoulbeCounter {
                 (*ctx.value_one >= 2).then_some(
                     e::div()
                         .id(TEXT)
-                        .child(|ctx: &S<Self>| format!("{}", *ctx.value_two)),
+                        .child(|ctx: &S<Self>| *ctx.value_two),
                 )
             })
     }
