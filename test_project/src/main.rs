@@ -1,38 +1,21 @@
 use ripple::prelude::*;
 
-#[derive(Component)]
-struct Bench(bool, usize);
+#[derive(Component, Default)]
+struct Counter {
+    value: u8,
+}
 
-impl Component for Bench {
+impl Component for Counter {
     fn render() -> impl Element<Self::Data> {
-        e::div()
-            .child(
-                e::button()
-                    .text("TOGGLE")
-                    .on("click", |ctx: &mut S<Self>| {
-                        *ctx.0 = !*ctx.0;
-                    }),
-            )
-            .child(|ctx: &S<Self>| {
-                if *ctx.0 {
-                    let mut result = e::div();
-                    for _ in 0..10_000 {
-                        result = result.child(
-                            e::button()
-                                .text(|ctx: &S<Self>| *ctx.1)
-                                .on("click", |ctx: &mut S<Self>| {
-                                    *ctx.1 += 1;
-                                }),
-                        );
-                    }
-                    Some(result)
-                } else {
-                    None
-                }
+        e::button()
+            .style("font-size", "4rem")
+            .text(|ctx: &S<Self>| *ctx.value)
+            .on("click", |ctx: &mut S<Self>| {
+                *ctx.value += 1;
             })
     }
 }
 
 fn main() {
-    mount_component(Bench(false, 0), "mount");
+    mount_component(Counter::default(), "mount");
 }

@@ -35,7 +35,6 @@ impl Component for Counter {
 * ✅ **Callbacks use references to state** – Instead of closures capturing state setters, Ripple callbacks take a reference to the state, which better aligns with Rust’s ownership model.
 * ✅ **Fine-grained reactivity** – Ripple only updates what's necessary, minimizing re-renders and maximizing performance.
 * ✅ **Smart feature selection** - Ripple will automatically use nightly-only optimizations if possible without needing a explicit `nightly` flag.
-* ✅ **Opt-In unsafe** - Ripple contains a set of off-by-default unsafe optimizations
 
 # Design Goals
 * **Developer experience first** – Ripple is designed to feel natural for Rust developers.

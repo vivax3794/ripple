@@ -18,26 +18,15 @@ struct DoulbeCounter {
 impl Component for DoulbeCounter {
     fn render() -> impl Element<Self::Data> {
         e::div()
-            .child(
-                e::button()
-                    .id(BUTTON_1)
-                    .on("click", |ctx: &mut S<Self>| {
-                        *ctx.value_one += 1;
-                    }),
-            )
-            .child(
-                e::button()
-                    .id(BUTTON_2)
-                    .on("click", |ctx: &mut S<Self>| {
-                        *ctx.value_two += 1;
-                    }),
-            )
+            .child(e::button().id(BUTTON_1).on("click", |ctx: &mut S<Self>| {
+                *ctx.value_one += 1;
+            }))
+            .child(e::button().id(BUTTON_2).on("click", |ctx: &mut S<Self>| {
+                *ctx.value_two += 1;
+            }))
             .child(|ctx: &S<Self>| {
-                (*ctx.value_one >= 2).then_some(
-                    e::div()
-                        .id(TEXT)
-                        .child(|ctx: &S<Self>| *ctx.value_two),
-                )
+                (*ctx.value_one >= 2)
+                    .then_some(e::div().id(TEXT).child(|ctx: &S<Self>| *ctx.value_two))
             })
     }
 }
@@ -63,4 +52,13 @@ fn update_affects_inner_node() {
 
     button_2.click();
     assert_eq!(text.text_content(), Some("2".to_owned()));
+
+    button_2.click();
+    assert_eq!(text.text_content(), Some("3".to_owned()));
+
+    button_2.click();
+    assert_eq!(text.text_content(), Some("4".to_owned()));
+
+    button_2.click();
+    assert_eq!(text.text_content(), Some("5".to_owned()));
 }

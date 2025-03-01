@@ -13,9 +13,7 @@ pub fn component_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
 fn implementation(item: TokenStream) -> TokenStream {
     let item: syn::ItemStruct = syn::parse2(item).unwrap();
 
-    let name = item
-        .ident
-        .clone();
+    let name = item.ident.clone();
     let (fields, is_named) = get_fields(item);
 
     let module_name = format_ident!("_{name}");
@@ -28,22 +26,29 @@ fn implementation(item: TokenStream) -> TokenStream {
             #(if is_named) {
                 pub struct #data_name {
                     #(for field in &fields) {
-                            pub #{field.access.clone()}: ::ripple::macro_ref::DataTracker<#{field.type_.clone()}, Self>,
+                            pub #{field.access.clone()}: ::ripple::macro_ref::Signal<#{field.type_.clone()}, Self>,
                     }
                 }
             } #(else) {
                 pub struct #data_name(
                     #(for field in &fields) {
-                            pub ::ripple::macro_ref::DataTracker<#{field.type_.clone()}, Self>,
+                            pub ::ripple::macro_ref::Signal<#{field.type_.clone()}, Self>,
                     }
                 );
             }
 
             impl ::ripple::macro_ref::ComponentData for #data_name {
-                fn references(&self) -> ::std::vec::Vec<&dyn ::ripple::macro_ref::DataTrackerMethods<Self>> {
+                fn signals(&self) -> ::std::vec::Vec<&dyn ::ripple::macro_ref::SignalMethods<Self>> {
                     ::std::vec![
                         #(for field in &fields) {
                             &self.#{field.access.clone()},
+                        }
+                    ]
+                }
+                fn signals_mut(&mut self) -> ::std::vec::Vec<&mut dyn ::ripple::macro_ref::SignalMethods<Self>> {
+                    ::std::vec![
+                        #(for field in &fields) {
+                            &mut self.#{field.access.clone()},
                         }
                     ]
                 }
@@ -54,7 +59,7 @@ fn implementation(item: TokenStream) -> TokenStream {
                 fn into_data(self) -> Self::Data {
                     #data_name {
                         #(for field in fields) {
-                            #{field.access.clone()}: ::ripple::macro_ref::DataTracker::new(self.#{field.access}),
+                            #{field.access.clone()}: ::ripple::macro_ref::Signal::new(self.#{field.access}),
                         }
                     }
                 }
@@ -71,12 +76,8 @@ fn get_fields(item: syn::ItemStruct) -> (Vec<Field>, bool) {
                 .named
                 .into_iter()
                 .map(|field| Field {
-                    type_: field
-                        .ty
-                        .into_token_stream(),
-                    access: field
-                        .ident
-                        .into_token_stream(),
+                    type_: field.ty.into_token_stream(),
+                    access: field.ident.into_token_stream(),
                 })
                 .collect(),
             true,
@@ -87,9 +88,7 @@ fn get_fields(item: syn::ItemStruct) -> (Vec<Field>, bool) {
                 .into_iter()
                 .enumerate()
                 .map(|(index, field)| Field {
-                    type_: field
-                        .ty
-                        .to_token_stream(),
+                    type_: field.ty.to_token_stream(),
                     access: proc_macro2::Literal::usize_unsuffixed(index).to_token_stream(),
                 })
                 .collect(),

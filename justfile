@@ -1,12 +1,17 @@
 [working-directory: './ripple']
 test:
-    rustup run stable wasm-pack test --headless --chrome
+    rustup run stable wasm-pack test --headless --chrome 
     rustup run nightly wasm-pack test --headless --chrome --features nightly
+
+[working-directory: './ripple']
+test_full:
+    rustup run stable wasm-pack test --headless --chrome --firefox
+    rustup run nightly wasm-pack test --headless --chrome --firefox --features nightly
 
 lint:
     cargo fmt --all
-    cargo clippy
-    cargo clippy --all-features
+    cargo +stable clippy
+    cargo +nightly clippy --all-features
 
 [working-directory: './docs']
 book:

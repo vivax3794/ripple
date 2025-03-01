@@ -12,9 +12,7 @@ struct HelloWorld {}
 
 impl Component for HelloWorld {
     fn render() -> impl Element<Self::Data> {
-        e::h1()
-            .id(HELLO_ID)
-            .text("Hello World!")
+        e::h1().id(HELLO_ID).text("Hello World!")
     }
 }
 
