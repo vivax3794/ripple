@@ -7,13 +7,13 @@ While not strictly needed the project template does use the following tools, whi
 * [wasm-opt](TODO) - Wasm optimizer
 * [wasm-strip](TODO) - strips uneeded code from wasm files
 
-## Install ripple cli
+## Install natrix cli
 (TODO: make cli)
 > This is only strictly needed for project generation and css tree-shacking
 
 ## Generate a project
 (TODO: make project template)
-For more details on the structure and non-default settings in the template see [Project Tempalte](./template.md). It goes into a bit of detail on standard rust-wasm files such as `Trunk.toml` and `index.html`, so its recommended to read if you are new to the ecosystem as the rest of the book will only cover Ripple specific features.
+For more details on the structure and non-default settings in the template see [Project Tempalte](./template.md). It goes into a bit of detail on standard rust-wasm files such as `Trunk.toml` and `index.html`, so its recommended to read if you are new to the ecosystem as the rest of the book will only cover Natrix specific features.
 
 ## Run the dev server
 you can start a dev server that automatically reload the page on changes with:

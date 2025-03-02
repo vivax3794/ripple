@@ -1,4 +1,4 @@
-use ripple::prelude::*;
+use natrix::prelude::*;
 
 #[derive(Component, Default)]
 struct Counter {

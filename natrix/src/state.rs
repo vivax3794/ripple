@@ -1,11 +1,10 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 
 use crate::component::ComponentBase;
 use crate::signal::{RcDepWeak, SignalMethods};
-use crate::utils::{RcCmpPtr, SmallAny};
+use crate::utils::{HashMap, RcCmpPtr, SmallAny};
 
 #[doc(hidden)]
 pub trait ComponentData: Sized + 'static {
@@ -68,7 +67,7 @@ impl<T: ComponentData> State<T> {
 
     pub(crate) fn update(&mut self) {
         #[allow(clippy::mutable_key_type)]
-        let mut hooks = HashMap::new();
+        let mut hooks = HashMap::default();
         for signal in self.data.signals_mut() {
             if signal.changed() {
                 signal.deps().retain(|hook| {

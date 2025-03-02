@@ -1,5 +1,5 @@
 [package]
-name = "ripple_macros"
+name = "natrix_macros"
 version = "0.1.0"
 edition = "2024"
 

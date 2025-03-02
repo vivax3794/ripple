@@ -1,4 +1,4 @@
-use ripple::prelude::*;
+use natrix::prelude::*;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 mod common;

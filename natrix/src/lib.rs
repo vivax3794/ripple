@@ -30,7 +30,7 @@ pub(crate) fn get_document() -> web_sys::Document {
 }
 
 pub mod prelude {
-    pub use ripple_macros::Component;
+    pub use natrix_macros::Component;
 
     pub use super::callbacks::Event;
     pub use super::component::{Component, mount_component};

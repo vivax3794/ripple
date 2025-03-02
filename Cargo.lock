@@ -62,6 +62,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "natrix"
+version = "0.1.0"
+dependencies = [
+ "cfg_aliases",
+ "itoa",
+ "natrix_macros",
+ "nohash-hasher",
+ "rustversion",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+ "web-sys",
+]
+
+[[package]]
+name = "natrix_macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.98",
+ "template-quote",
+]
+
+[[package]]
+name = "nohash-hasher"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
+
+[[package]]
 name = "once_cell"
 version = "1.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -107,29 +137,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e4dccaaaf89514f546c693ddc140f729f958c247918a13380cccc6078391acc"
 dependencies = [
  "proc-macro2",
-]
-
-[[package]]
-name = "ripple"
-version = "0.1.0"
-dependencies = [
- "cfg_aliases",
- "itoa",
- "ripple_macros",
- "rustversion",
- "wasm-bindgen",
- "wasm-bindgen-test",
- "web-sys",
-]
-
-[[package]]
-name = "ripple_macros"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.98",
- "template-quote",
 ]
 
 [[package]]
@@ -201,7 +208,7 @@ dependencies = [
 name = "test_project"
 version = "0.1.0"
 dependencies = [
- "ripple",
+ "natrix",
  "wasm-bindgen",
 ]
 

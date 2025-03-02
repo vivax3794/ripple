@@ -1,12 +1,12 @@
-[working-directory: './ripple']
+[working-directory: './natrix']
 test:
     rustup run stable wasm-pack test --headless --chrome 
     rustup run nightly wasm-pack test --headless --chrome --features nightly
 
-[working-directory: './ripple']
-test_full:
-    rustup run stable wasm-pack test --headless --chrome --firefox
-    rustup run nightly wasm-pack test --headless --chrome --firefox --features nightly
+[working-directory: './natrix']
+test_slow: test
+    rustup run stable wasm-pack test --headless --firefox
+    rustup run nightly wasm-pack test --headless --firefox --features nightly
 
 lint:
     cargo fmt --all
@@ -34,3 +34,7 @@ build:
 [working-directory: './test_project/dist']
 serve_build: build
     python -m http.server
+
+publish: test_slow
+    cargo publish -p natrix_macro
+    cargo publish -p natrix

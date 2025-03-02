@@ -16,51 +16,47 @@ fn implementation(item: TokenStream) -> TokenStream {
     let name = item.ident.clone();
     let (fields, is_named) = get_fields(item);
 
-    let module_name = format_ident!("_{name}");
-    let data_name = format_ident!("Data");
+    let data_name = format_ident!("_{name}Data");
 
     quote! {
         #[doc(hidden)]
-        pub mod #module_name {
-            #[doc(hidden)]
-            #(if is_named) {
-                pub struct #data_name {
-                    #(for field in &fields) {
-                            pub #{field.access.clone()}: ::ripple::macro_ref::Signal<#{field.type_.clone()}, Self>,
-                    }
-                }
-            } #(else) {
-                pub struct #data_name(
-                    #(for field in &fields) {
-                            pub ::ripple::macro_ref::Signal<#{field.type_.clone()}, Self>,
-                    }
-                );
-            }
-
-            impl ::ripple::macro_ref::ComponentData for #data_name {
-                fn signals(&self) -> ::std::vec::Vec<&dyn ::ripple::macro_ref::SignalMethods<Self>> {
-                    ::std::vec![
-                        #(for field in &fields) {
-                            &self.#{field.access.clone()},
-                        }
-                    ]
-                }
-                fn signals_mut(&mut self) -> ::std::vec::Vec<&mut dyn ::ripple::macro_ref::SignalMethods<Self>> {
-                    ::std::vec![
-                        #(for field in &fields) {
-                            &mut self.#{field.access.clone()},
-                        }
-                    ]
+        #(if is_named) {
+            pub struct #data_name {
+                #(for field in &fields) {
+                        pub #{field.access.clone()}: ::natrix::macro_ref::Signal<#{field.type_.clone()}, Self>,
                 }
             }
+        } #(else) {
+            pub struct #data_name(
+                #(for field in &fields) {
+                        pub ::natrix::macro_ref::Signal<#{field.type_.clone()}, Self>,
+                }
+            );
+        }
 
-            impl ::ripple::macro_ref::ComponentBase for super::#name {
-                type Data = #data_name;
-                fn into_data(self) -> Self::Data {
-                    #data_name {
-                        #(for field in fields) {
-                            #{field.access.clone()}: ::ripple::macro_ref::Signal::new(self.#{field.access}),
-                        }
+        impl ::natrix::macro_ref::ComponentData for #data_name {
+            fn signals(&self) -> ::std::vec::Vec<&dyn ::natrix::macro_ref::SignalMethods<Self>> {
+                ::std::vec![
+                    #(for field in &fields) {
+                        &self.#{field.access.clone()},
+                    }
+                ]
+            }
+            fn signals_mut(&mut self) -> ::std::vec::Vec<&mut dyn ::natrix::macro_ref::SignalMethods<Self>> {
+                ::std::vec![
+                    #(for field in &fields) {
+                        &mut self.#{field.access.clone()},
+                    }
+                ]
+            }
+        }
+
+        impl ::natrix::macro_ref::ComponentBase for #name {
+            type Data = #data_name;
+            fn into_data(self) -> Self::Data {
+                #data_name {
+                    #(for field in fields) {
+                        #{field.access.clone()}: ::natrix::macro_ref::Signal::new(self.#{field.access}),
                     }
                 }
             }

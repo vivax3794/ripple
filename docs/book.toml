@@ -3,7 +3,7 @@ authors = ["Viv"]
 language = "en"
 multilingual = false
 src = "src"
-title = "Ripple"
+title = "Natrix"
 
 [output.html.playground]
 runnable = false

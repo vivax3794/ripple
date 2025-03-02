@@ -1,17 +1,19 @@
 [package]
-name = "ripple"
+name = "natrix"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 wasm-bindgen = {version= "0.2.100"}
-web-sys = { version = "0.3.77", features = ["Comment", "Element", "Event", "Text", "Document", "Window", "HtmlElement"] }
+web-sys = { version = "0.3.77", features = ["Comment", "Element", "Event", "Text", "Document", "Window"] }
 
-ripple_macros = {path = "../ripple_macros"}
+natrix_macros = {path = "../natrix_macros", version="0.1.0"}
 itoa = { version = "1.0.14" }
+nohash-hasher = "0.2.0"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.50"
+web-sys = { version = "0.3.77", features = ["Document", "Window", "HtmlElement"] }
 
 [build-dependencies]
 cfg_aliases = "0.2.1"

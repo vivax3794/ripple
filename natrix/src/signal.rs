@@ -1,9 +1,8 @@
 use std::cell::{Cell, RefCell};
-use std::collections::HashSet;
 use std::ops::{Deref, DerefMut};
 
 use crate::state::{ComponentData, KeepAlive, State};
-use crate::utils::{RcCmpPtr, WeakCmpPtr};
+use crate::utils::{HashSet, RcCmpPtr, WeakCmpPtr};
 
 pub type RcDep<C> = RcCmpPtr<RefCell<Box<dyn ReactiveHook<C>>>>;
 pub type RcDepWeak<C> = WeakCmpPtr<RefCell<Box<dyn ReactiveHook<C>>>>;
@@ -32,7 +31,7 @@ impl<T, C> Signal<T, C> {
             data,
             written: false,
             read: Cell::new(false),
-            deps: HashSet::new(),
+            deps: HashSet::default(),
         }
     }
 }
