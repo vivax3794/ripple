@@ -3,11 +3,15 @@ name = "natrix_macros"
 version = "0.1.0"
 edition = "2024"
 
+description = "Macros for natrix"
+license = "MIT"
+repository = "https://github.com/vivax3794/natrix"
+
 [lib]
 proc-macro = true
 
 [dependencies]
 proc-macro2 = {version="1.0.93", default-features = false}
 quote = {version="1.0.38", default-features = false}
-syn = { version = "2.0", default-features = false }
+syn = { version = "2.0", default-features = false, features=["derive"]}
 template-quote = "0.4.2"

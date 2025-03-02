@@ -1,4 +1,0 @@
-[unstable]
-build-std = ['std', 'panic_abort']
-
-[target."wasm32-unknown-unknown"]

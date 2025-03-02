@@ -1,10 +1,3 @@
 [workspace]
 resolver = "2"
-members = ["natrix", "natrix_macros", "test_project"]
-
-[profile.release]
-lto = "fat"
-codegen-units = 1
-opt-level = "z"
-strip = true
-panic = "abort"
+members = ["natrix", "natrix_macros"]

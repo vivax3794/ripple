@@ -1,20 +1,19 @@
 extern crate proc_macro;
 use proc_macro2::TokenStream;
 use quote::format_ident;
+use syn::ItemStruct;
 use template_quote::{ToTokens, quote};
 
 #[proc_macro_derive(Component)]
 pub fn component_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let item = item.into();
+    let item = syn::parse_macro_input!(item as ItemStruct);
     let result = implementation(item);
     result.into()
 }
 
-fn implementation(item: TokenStream) -> TokenStream {
-    let item: syn::ItemStruct = syn::parse2(item).unwrap();
-
+fn implementation(item: ItemStruct) -> TokenStream {
     let name = item.ident.clone();
-    let (fields, is_named) = get_fields(item);
+    let (fields, is_named) = get_fields(item.fields);
 
     let data_name = format_ident!("_{name}Data");
 
@@ -64,8 +63,8 @@ fn implementation(item: TokenStream) -> TokenStream {
     }
 }
 
-fn get_fields(item: syn::ItemStruct) -> (Vec<Field>, bool) {
-    match item.fields {
+fn get_fields(fields: syn::Fields) -> (Vec<Field>, bool) {
+    match fields {
         syn::Fields::Unit => (vec![], true),
         syn::Fields::Named(fields) => (
             fields

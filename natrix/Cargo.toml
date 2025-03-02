@@ -3,9 +3,13 @@ name = "natrix"
 version = "0.1.0"
 edition = "2024"
 
+description = "Rust-First frontend framework."
+license = "MIT"
+repository = "https://github.com/vivax3794/natrix"
+
 [dependencies]
 wasm-bindgen = {version= "0.2.100"}
-web-sys = { version = "0.3.77", features = ["Comment", "Element", "Event", "Text", "Document", "Window"] }
+web-sys = { version = "0.3.77", features = ["Comment", "Element", "Event", "Text", "Document", "Window", "HtmlElement"] }
 
 natrix_macros = {path = "../natrix_macros", version="0.1.0"}
 itoa = { version = "1.0.14" }
@@ -13,7 +17,6 @@ nohash-hasher = "0.2.0"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.50"
-web-sys = { version = "0.3.77", features = ["Document", "Window", "HtmlElement"] }
 
 [build-dependencies]
 cfg_aliases = "0.2.1"
